@@ -12,15 +12,14 @@ const genderDescriptors = { mujer: 'una mujer', hombre: 'un hombre', 'persona no
 const DIE_FACTOR_BY_ROLL = { 1: 0.45, 2: 0.75, 3: 1, 4: 1.15, 5: 1.35, 6: 1.65 };
 const MIN_SAVINGS = -10;
 const NOBEL_REQUIREMENTS = { prestige: 70, papers: 6, discoveries: 2, wellbeing: 20 };
-
-const webCrypto = globalThis.crypto;
+const MAX_GAME_ROUNDS = 10;
 
 function randomInt(maxExclusive) {
-  if (!webCrypto || typeof webCrypto.getRandomValues !== 'function') {
+  if (!globalThis.crypto || typeof globalThis.crypto.getRandomValues !== 'function') {
     throw new Error('Este juego requiere un navegador con crypto.getRandomValues');
   }
   const values = new Uint32Array(1);
-  webCrypto.getRandomValues(values);
+  globalThis.crypto.getRandomValues(values);
   return values[0] % maxExclusive;
 }
 
@@ -126,7 +125,7 @@ const state = {
   papers: 0,
   discoveries: 0,
   rounds: 0,
-  maxRounds: Math.min(10, questions.length),
+  maxRounds: Math.min(MAX_GAME_ROUNDS, questions.length),
   queue: []
 };
 
