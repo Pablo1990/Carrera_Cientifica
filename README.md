@@ -1,6 +1,6 @@
 # Carrera Científica
 
-Videojuego web corto (en Español) para adolescentes sobre decisiones reales en la carrera científica.
+Videojuego web corto (en español) para adolescentes sobre decisiones reales en la carrera científica.
 
 ## Cómo jugar
 
