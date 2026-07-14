@@ -1,22 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import {
-  genders,
-  genderDescriptors,
+  LANG,
   DIE_FACTOR_BY_ROLL,
   MIN_SAVINGS,
   NOBEL_REQUIREMENTS,
   MAX_GAME_ROUNDS,
-  questions,
   randomInt,
   shuffle,
   rollDie,
   dieFactor,
-  dieText,
   applyImpact,
   hasMetNobelRequirements,
   createInitialState
 } from './game-logic.js';
 
+// ---------------------------------------------------------------------------
+// dieFactor
+// ---------------------------------------------------------------------------
 describe('dieFactor', () => {
   it('returns the correct multiplier for every die face', () => {
     expect(dieFactor(1)).toBe(0.45);
@@ -34,29 +34,115 @@ describe('dieFactor', () => {
   });
 });
 
-describe('dieText', () => {
-  it('describes obstacles for low rolls (1–2)', () => {
-    expect(dieText(1)).toContain('obstáculos imprevistos');
-    expect(dieText(2)).toContain('obstáculos imprevistos');
+// ---------------------------------------------------------------------------
+// LANG structure
+// ---------------------------------------------------------------------------
+describe('LANG', () => {
+  const requiredStringKeys = [
+    'htmlLang', 'pageTitle', 'gameTitle', 'subtitle',
+    'characterSectionTitle', 'questionSectionStart', 'questionPlaceholder',
+    'resultSectionTitle', 'resultPlaceholder', 'startBtnLabel', 'restartBtnLabel',
+    'dieIntro', 'gameEndTitle', 'nobelWin', 'nobelLose'
+  ];
+  const requiredFnKeys = ['characterIntro', 'dieText', 'decisionText', 'statsText', 'gameEndResult'];
+
+  it.each(['es', 'en'])('LANG.%s has all required string keys', (lang) => {
+    requiredStringKeys.forEach((key) => {
+      expect(typeof LANG[lang][key], `${lang}.${key}`).toBe('string');
+      expect(LANG[lang][key].length, `${lang}.${key} should be non-empty`).toBeGreaterThan(0);
+    });
   });
 
-  it('describes a reasonable result for medium rolls (3–4)', () => {
-    expect(dieText(3)).toContain('razonable');
-    expect(dieText(4)).toContain('razonable');
+  it.each(['es', 'en'])('LANG.%s has all required function keys', (lang) => {
+    requiredFnKeys.forEach((key) => {
+      expect(typeof LANG[lang][key], `${lang}.${key}`).toBe('function');
+    });
   });
 
-  it('describes a better-than-expected result for high rolls (5–6)', () => {
-    expect(dieText(5)).toContain('mejor de lo esperado');
-    expect(dieText(6)).toContain('mejor de lo esperado');
+  it.each(['es', 'en'])('LANG.%s.genders is a non-empty array', (lang) => {
+    expect(Array.isArray(LANG[lang].genders)).toBe(true);
+    expect(LANG[lang].genders.length).toBeGreaterThan(0);
   });
 
-  it('includes the roll number in the returned string', () => {
+  it.each(['es', 'en'])('LANG.%s every gender has a corresponding descriptor', (lang) => {
+    LANG[lang].genders.forEach((gender) => {
+      expect(LANG[lang].genderDescriptors[gender]).toBeDefined();
+      expect(typeof LANG[lang].genderDescriptors[gender]).toBe('string');
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LANG dieText
+// ---------------------------------------------------------------------------
+describe.each(['es', 'en'])('LANG.%s.dieText', (lang) => {
+  const { dieText } = LANG[lang];
+
+  it('returns a string containing the roll number for each face', () => {
     for (let roll = 1; roll <= 6; roll++) {
       expect(dieText(roll)).toContain(String(roll));
     }
   });
+
+  it('returns different text for low (1-2), medium (3-4) and high (5-6) rolls', () => {
+    const low = dieText(1);
+    const medium = dieText(3);
+    const high = dieText(5);
+    expect(low).not.toBe(medium);
+    expect(medium).not.toBe(high);
+    expect(low).not.toBe(high);
+  });
+
+  it('rolls 1 and 2 share the same outcome text', () => {
+    const roll1text = dieText(1).replace('1', 'X');
+    const roll2text = dieText(2).replace('2', 'X');
+    expect(roll1text).toBe(roll2text);
+  });
 });
 
+// ---------------------------------------------------------------------------
+// LANG questions
+// ---------------------------------------------------------------------------
+describe.each(['es', 'en'])('LANG.%s.questions', (lang) => {
+  const { questions } = LANG[lang];
+
+  it(`has at least ${MAX_GAME_ROUNDS} questions`, () => {
+    expect(questions.length).toBeGreaterThanOrEqual(MAX_GAME_ROUNDS);
+  });
+
+  it('every question has a non-empty title and text', () => {
+    questions.forEach((q) => {
+      expect(typeof q.title).toBe('string');
+      expect(q.title.length).toBeGreaterThan(0);
+      expect(typeof q.text).toBe('string');
+      expect(q.text.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('every question has at least one option with a label and an impact object', () => {
+    questions.forEach((q) => {
+      expect(q.options.length).toBeGreaterThan(0);
+      q.options.forEach((opt) => {
+        expect(typeof opt.label).toBe('string');
+        expect(opt.label.length).toBeGreaterThan(0);
+        expect(typeof opt.impact).toBe('object');
+      });
+    });
+  });
+
+  it('question titles are unique', () => {
+    const titles = questions.map((q) => q.title);
+    expect(new Set(titles).size).toBe(titles.length);
+  });
+});
+
+it('ES and EN have the same number of questions', () => {
+  expect(LANG.es.questions.length).toBe(LANG.en.questions.length);
+});
+
+// ---------------------------------------------------------------------------
+// createInitialState
+// ---------------------------------------------------------------------------
 describe('createInitialState', () => {
   it('returns a fresh state object with the expected default values', () => {
     const state = createInitialState();
@@ -73,7 +159,7 @@ describe('createInitialState', () => {
 
   it('sets maxRounds to the minimum of MAX_GAME_ROUNDS and questions.length', () => {
     const state = createInitialState();
-    expect(state.maxRounds).toBe(Math.min(MAX_GAME_ROUNDS, questions.length));
+    expect(state.maxRounds).toBe(Math.min(MAX_GAME_ROUNDS, LANG.es.questions.length));
   });
 
   it('returns a new independent object on every call', () => {
@@ -84,6 +170,9 @@ describe('createInitialState', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// applyImpact
+// ---------------------------------------------------------------------------
 describe('applyImpact', () => {
   it('applies the die factor to every impact key', () => {
     const state = createInitialState();
@@ -136,6 +225,9 @@ describe('applyImpact', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// hasMetNobelRequirements
+// ---------------------------------------------------------------------------
 describe('hasMetNobelRequirements', () => {
   it('returns false for the initial state', () => {
     expect(hasMetNobelRequirements(createInitialState())).toBe(false);
@@ -175,6 +267,9 @@ describe('hasMetNobelRequirements', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// shuffle
+// ---------------------------------------------------------------------------
 describe('shuffle', () => {
   it('returns an array with the same elements in any order', () => {
     const items = [1, 2, 3, 4, 5];
@@ -196,6 +291,9 @@ describe('shuffle', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// rollDie / randomInt
+// ---------------------------------------------------------------------------
 describe('rollDie', () => {
   it('always returns an integer between 1 and 6 inclusive', () => {
     for (let i = 0; i < 200; i++) {
@@ -214,45 +312,5 @@ describe('randomInt', () => {
       expect(result).toBeGreaterThanOrEqual(0);
       expect(result).toBeLessThan(5);
     }
-  });
-});
-
-describe('questions', () => {
-  it(`has at least ${MAX_GAME_ROUNDS} questions`, () => {
-    expect(questions.length).toBeGreaterThanOrEqual(MAX_GAME_ROUNDS);
-  });
-
-  it('every question has a non-empty title and text', () => {
-    questions.forEach((q) => {
-      expect(typeof q.title).toBe('string');
-      expect(q.title.length).toBeGreaterThan(0);
-      expect(typeof q.text).toBe('string');
-      expect(q.text.length).toBeGreaterThan(0);
-    });
-  });
-
-  it('every question has at least one option with a label and an impact object', () => {
-    questions.forEach((q) => {
-      expect(q.options.length).toBeGreaterThan(0);
-      q.options.forEach((opt) => {
-        expect(typeof opt.label).toBe('string');
-        expect(opt.label.length).toBeGreaterThan(0);
-        expect(typeof opt.impact).toBe('object');
-      });
-    });
-  });
-
-  it('question titles are unique', () => {
-    const titles = questions.map((q) => q.title);
-    expect(new Set(titles).size).toBe(titles.length);
-  });
-});
-
-describe('genders and genderDescriptors', () => {
-  it('every gender has a corresponding descriptor', () => {
-    genders.forEach((gender) => {
-      expect(genderDescriptors[gender]).toBeDefined();
-      expect(typeof genderDescriptors[gender]).toBe('string');
-    });
   });
 });

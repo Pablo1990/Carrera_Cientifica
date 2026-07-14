@@ -1,11 +1,8 @@
 import {
-  genders,
-  genderDescriptors,
-  questions,
+  LANG,
   randomInt,
   shuffle,
   rollDie,
-  dieText,
   applyImpact,
   hasMetNobelRequirements,
   createInitialState
@@ -19,26 +16,33 @@ const optionsEl = document.getElementById('options');
 const resultEl = document.getElementById('result');
 const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
+const langEsBtn = document.getElementById('lang-es');
+const langEnBtn = document.getElementById('lang-en');
+
+let currentLang = 'es';
 
 const state = createInitialState();
 
 function renderStats() {
-  statsEl.textContent = `Edad: ${state.age} · Prestigio: ${state.prestige} · Bienestar: ${state.wellbeing} · Ahorros: ${state.savings} · Papers: ${state.papers} · Hallazgos: ${state.discoveries}`;
+  statsEl.textContent = LANG[currentLang].statsText(state);
+}
+
+function hasMetNobel() {
+  return hasMetNobelRequirements(state);
 }
 
 function finishGame() {
+  const t = LANG[currentLang];
   optionsEl.innerHTML = '';
-  questionTitleEl.textContent = 'Final de partida';
+  questionTitleEl.textContent = t.gameEndTitle;
 
-  const wonNobel = hasMetNobelRequirements(state);
-
-  if (wonNobel) {
-    questionEl.textContent = '¡Ganaste el Nobel! Llegaste lejos combinando rigor, decisiones difíciles y algo de suerte.';
+  if (hasMetNobel()) {
+    questionEl.textContent = t.nobelWin;
   } else {
-    questionEl.textContent = 'No llegó el Nobel esta vez, pero construiste una carrera real: con aprendizaje, tropiezos y logros.';
+    questionEl.textContent = t.nobelLose;
   }
 
-  resultEl.textContent = `Cierre: terminaste con ${state.papers} papers y ${state.discoveries} descubrimientos. La ciencia es una maratón, no un sprint.`;
+  resultEl.textContent = t.gameEndResult(state);
   startBtn.hidden = true;
   restartBtn.hidden = false;
 }
@@ -65,7 +69,8 @@ function renderQuestion() {
       });
       const roll = rollDie();
       applyImpact(state, option.impact, roll);
-      resultEl.textContent = `${dieText(roll)} Decidiste: "${option.label}"`;
+      const t = LANG[currentLang];
+      resultEl.textContent = `${t.dieText(roll)} ${t.decisionText(option.label)}`;
       renderStats();
       renderQuestion();
     });
@@ -74,19 +79,23 @@ function renderQuestion() {
 }
 
 function startGame() {
+  const t = LANG[currentLang];
+  const questions = t.questions;
+
   state.age = 18 + randomInt(3);
-  state.gender = genders[randomInt(genders.length)];
+  state.gender = t.genders[randomInt(t.genders.length)];
   state.prestige = 0;
   state.wellbeing = 50;
   state.savings = 10;
   state.papers = 0;
   state.discoveries = 0;
   state.rounds = 0;
+  state.maxRounds = Math.min(10, questions.length);
   state.queue = shuffle(questions).slice(0, state.maxRounds);
 
-  const descriptor = genderDescriptors[state.gender];
-  characterEl.textContent = `Tu protagonista es ${descriptor} de ${state.age} años que empieza a decidir su camino científico.`;
-  resultEl.textContent = 'Cada opción se resuelve con un dado virtual (1-6).';
+  const descriptor = t.genderDescriptors[state.gender];
+  characterEl.textContent = t.characterIntro(descriptor, state.age);
+  resultEl.textContent = t.dieIntro;
   startBtn.hidden = true;
   restartBtn.hidden = true;
 
@@ -94,5 +103,42 @@ function startGame() {
   renderQuestion();
 }
 
+function updateStaticUI() {
+  const t = LANG[currentLang];
+  document.documentElement.lang = t.htmlLang;
+  document.title = t.pageTitle;
+  document.getElementById('game-title').textContent = t.gameTitle;
+  document.getElementById('subtitle').textContent = t.subtitle;
+  document.getElementById('character-title').textContent = t.characterSectionTitle;
+  document.getElementById('result-title').textContent = t.resultSectionTitle;
+  startBtn.textContent = t.startBtnLabel;
+  restartBtn.textContent = t.restartBtnLabel;
+
+  langEsBtn.classList.toggle('active', currentLang === 'es');
+  langEnBtn.classList.toggle('active', currentLang === 'en');
+  langEsBtn.setAttribute('aria-pressed', currentLang === 'es');
+  langEnBtn.setAttribute('aria-pressed', currentLang === 'en');
+}
+
+function switchLanguage(lang) {
+  if (lang === currentLang) return;
+  currentLang = lang;
+  updateStaticUI();
+
+  // Reset to initial pre-game state when language changes
+  state.rounds = 0;
+  state.queue = [];
+  characterEl.textContent = '';
+  statsEl.textContent = '';
+  questionTitleEl.textContent = LANG[currentLang].questionSectionStart;
+  questionEl.textContent = LANG[currentLang].questionPlaceholder;
+  optionsEl.innerHTML = '';
+  resultEl.textContent = LANG[currentLang].resultPlaceholder;
+  startBtn.hidden = false;
+  restartBtn.hidden = true;
+}
+
+langEsBtn.addEventListener('click', () => switchLanguage('es'));
+langEnBtn.addEventListener('click', () => switchLanguage('en'));
 startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', startGame);
