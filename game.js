@@ -9,6 +9,17 @@ const restartBtn = document.getElementById('restart-btn');
 
 const genders = ['mujer', 'hombre', 'persona no binaria'];
 
+const cryptoApi = globalThis.crypto;
+
+function randomInt(maxExclusive) {
+  if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+    const values = new Uint32Array(1);
+    cryptoApi.getRandomValues(values);
+    return values[0] % maxExclusive;
+  }
+  return Math.floor(Math.random() * maxExclusive);
+}
+
 const questions = [
   {
     title: 'Primera gran decisión',
@@ -111,25 +122,25 @@ const state = {
   papers: 0,
   discoveries: 0,
   rounds: 0,
-  maxRounds: 8,
+  maxRounds: 10,
   queue: []
 };
 
 function shuffle(items) {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomInt(i + 1);
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }
 
 function rollDie() {
-  return Math.floor(Math.random() * 6) + 1;
+  return randomInt(6) + 1;
 }
 
 function dieFactor(roll) {
-  return [0, 0.45, 0.75, 1, 1.15, 1.35, 1.65][roll];
+  return [0.45, 0.75, 1, 1.15, 1.35, 1.65][roll - 1];
 }
 
 function dieText(roll) {
@@ -202,8 +213,8 @@ function renderQuestion() {
 }
 
 function startGame() {
-  state.age = 18 + Math.floor(Math.random() * 3);
-  state.gender = genders[Math.floor(Math.random() * genders.length)];
+  state.age = 18 + randomInt(3);
+  state.gender = genders[randomInt(genders.length)];
   state.prestige = 0;
   state.wellbeing = 50;
   state.savings = 10;

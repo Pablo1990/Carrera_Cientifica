@@ -4,7 +4,7 @@ Videojuego web corto (en Español) para adolescentes sobre decisiones reales en 
 
 ## Cómo jugar
 
-1. Abre `/home/runner/work/Carrera_Cientifica/Carrera_Cientifica/index.html` en tu navegador.
+1. Abre `index.html` en tu navegador (desde la carpeta del proyecto).
 2. Pulsa **Comenzar**.
 3. Elige opciones en cada situación y observa el resultado del dado virtual.
 4. Intenta avanzar lo suficiente para ganar el Premio Nobel.
