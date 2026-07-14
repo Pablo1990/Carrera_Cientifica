@@ -64,7 +64,7 @@ describe('LANG', () => {
     expect(LANG[lang].genders.length).toBeGreaterThan(0);
   });
 
-  it.each(['es', 'en'])('LANG.%s every gender has a corresponding descriptor', (lang) => {
+  it.each(['es', 'en'])('LANG.%s: every gender has a corresponding descriptor', (lang) => {
     LANG[lang].genders.forEach((gender) => {
       expect(LANG[lang].genderDescriptors[gender]).toBeDefined();
       expect(typeof LANG[lang].genderDescriptors[gender]).toBe('string');

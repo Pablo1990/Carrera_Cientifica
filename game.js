@@ -1,5 +1,6 @@
 import {
   LANG,
+  MAX_GAME_ROUNDS,
   randomInt,
   shuffle,
   rollDie,
@@ -90,7 +91,7 @@ function startGame() {
   state.papers = 0;
   state.discoveries = 0;
   state.rounds = 0;
-  state.maxRounds = Math.min(10, questions.length);
+  state.maxRounds = Math.min(MAX_GAME_ROUNDS, questions.length);
   state.queue = shuffle(questions).slice(0, state.maxRounds);
 
   const descriptor = t.genderDescriptors[state.gender];
