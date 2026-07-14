@@ -282,13 +282,13 @@ const state = {
   papers: 0,
   discoveries: 0,
   rounds: 0,
-  maxRounds: MAX_GAME_ROUNDS,
+  maxRounds: Math.min(MAX_GAME_ROUNDS, LANG.es.questions.length),
   queue: []
 };
 
 function randomInt(maxExclusive) {
   if (!globalThis.crypto || typeof globalThis.crypto.getRandomValues !== 'function') {
-    throw new Error('Este juego requiere un navegador con crypto.getRandomValues');
+    throw new Error('This game requires a browser with crypto.getRandomValues support.');
   }
   const values = new Uint32Array(1);
   globalThis.crypto.getRandomValues(values);
