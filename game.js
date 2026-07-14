@@ -8,16 +8,19 @@ const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 
 const genders = ['mujer', 'hombre', 'persona no binaria'];
+const genderDescriptors = { mujer: 'una mujer', hombre: 'un hombre', 'persona no binaria': 'una persona no binaria' };
+const DIE_FACTORS = [0.45, 0.75, 1, 1.15, 1.35, 1.65];
+const MIN_SAVINGS = -10;
 
 const cryptoApi = globalThis.crypto;
 
 function randomInt(maxExclusive) {
-  if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
-    const values = new Uint32Array(1);
-    cryptoApi.getRandomValues(values);
-    return values[0] % maxExclusive;
+  if (!cryptoApi || typeof cryptoApi.getRandomValues !== 'function') {
+    throw new Error('Este juego requiere un navegador con crypto.getRandomValues');
   }
-  return Math.floor(Math.random() * maxExclusive);
+  const values = new Uint32Array(1);
+  cryptoApi.getRandomValues(values);
+  return values[0] % maxExclusive;
 }
 
 const questions = [
@@ -140,7 +143,7 @@ function rollDie() {
 }
 
 function dieFactor(roll) {
-  return [0.45, 0.75, 1, 1.15, 1.35, 1.65][roll - 1];
+  return DIE_FACTORS[roll - 1];
 }
 
 function dieText(roll) {
@@ -159,7 +162,7 @@ function applyImpact(baseImpact, roll) {
   });
 
   state.wellbeing = Math.max(0, Math.min(100, state.wellbeing));
-  state.savings = Math.max(-10, state.savings);
+  state.savings = Math.max(MIN_SAVINGS, state.savings);
   state.age += 1;
   state.rounds += 1;
 }
@@ -223,7 +226,7 @@ function startGame() {
   state.rounds = 0;
   state.queue = shuffle(questions).slice(0, state.maxRounds);
 
-  const descriptor = state.gender === 'hombre' ? `un ${state.gender}` : `una ${state.gender}`;
+  const descriptor = genderDescriptors[state.gender];
   characterEl.textContent = `Tu protagonista es ${descriptor} de ${state.age} años que empieza a decidir su camino científico.`;
   resultEl.textContent = 'Cada opción se resuelve con un dado virtual (1-6).';
   startBtn.hidden = true;
