@@ -23,3 +23,40 @@ Juega en línea: **https://pablo1990.github.io/Carrera_Cientifica/**
 - Migrar al Reino Unido (beneficios y dificultades).
 - Conferencias internacionales, industria y descubrimientos inesperados.
 - Pensamiento crítico con lenguaje cercano.
+
+## Estructura del proyecto
+
+```
+├── index.html          # Página principal del juego
+├── game.js             # Lógica de presentación (DOM)
+├── styles.css          # Estilos
+└── src/
+    ├── game-logic.js       # Lógica pura del juego (testeable)
+    └── game-logic.test.js  # Tests automáticos
+```
+
+## Tests automáticos
+
+La lógica pura del juego (dados, impactos, requisitos del Nobel, preguntas…) está cubierta por tests automáticos con [Vitest](https://vitest.dev/).
+
+### Requisitos
+
+- Node.js 18 o superior
+
+### Instalación de dependencias
+
+```bash
+npm install
+```
+
+### Ejecutar los tests
+
+```bash
+npm test
+```
+
+### Ejecutar los tests en modo interactivo (watch)
+
+```bash
+npm run test:watch
+```
