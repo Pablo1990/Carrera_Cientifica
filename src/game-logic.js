@@ -14,10 +14,18 @@ export const ACHIEVEMENTS = [
   { id: 'wellbeing80',  condition: (s) => s.wellbeing >= 80 },
 ];
 
+/** Returns a signed string representation of a numeric delta, e.g. "+5" or "-3". */
 function formatDelta(d) {
   return `${d > 0 ? '+' : ''}${d}`;
 }
 
+/**
+ * Builds a list of human-readable delta strings for changed stats.
+ * @param {Array<[string, string]>} labels - Pairs of [display label, state key].
+ * @param {Object} before - Snapshot of stats before the impact.
+ * @param {Object} after  - Stats object after the impact.
+ * @returns {string[]} Array of formatted delta strings for stats that changed.
+ */
 function buildImpactText(labels, before, after) {
   const deltas = labels
     .filter(([, key]) => after[key] !== before[key])
@@ -393,8 +401,10 @@ export function buildQueue(questions, maxRounds) {
   const rest = shuffle(questions.filter((q) => !q.alwaysFirst));
   // Queue is consumed via .pop(), so items at the END are shown FIRST.
   // Fixed questions go at the end so they appear first in the game.
-  const selected = rest.slice(0, maxRounds - fixed.length);
-  return [...selected, ...fixed];
+  // Clamp so the total never exceeds maxRounds even if fixed.length >= maxRounds.
+  const fixedSlice = fixed.slice(0, maxRounds);
+  const selected = rest.slice(0, Math.max(0, maxRounds - fixedSlice.length));
+  return [...selected, ...fixedSlice];
 }
 
 export function checkAchievements(state) {

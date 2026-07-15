@@ -404,9 +404,15 @@ describe('buildQueue', () => {
     }
   });
 
-  it('does not include more items than maxRounds', () => {
-    const q = buildQueue(questions, 3);
-    expect(q).toHaveLength(3);
+  it('does not exceed maxRounds when fixed.length equals maxRounds', () => {
+    const questionsAllFixed = [
+      { alwaysFirst: true, title: 'X' },
+      { alwaysFirst: true, title: 'Y' },
+      { title: 'Z' },
+    ];
+    const q = buildQueue(questionsAllFixed, 2);
+    expect(q).toHaveLength(2);
+    expect(q.every((item) => item.alwaysFirst)).toBe(true);
   });
 
   it('does not mutate the original questions array', () => {

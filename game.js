@@ -40,6 +40,7 @@ function renderAchievements() {
     achievementsListEl.innerHTML = `<li class="achievements-placeholder">${t.achievementsPlaceholder}</li>`;
   } else {
     achievementsListEl.innerHTML = state.achievements
+      .filter((id) => t.achievements[id])
       .map((id) => `<li class="achievement-item">${t.achievements[id]}</li>`)
       .join('');
   }
@@ -93,7 +94,10 @@ function renderQuestion() {
       newAchievements.forEach((id) => state.achievements.push(id));
       const t = LANG[currentLang];
       const impactLine = t.impactText(before, state);
-      const achievementLines = newAchievements.map((id) => `🏅 ${t.achievements[id]}`).join('\n');
+      const achievementLines = newAchievements
+        .map((id) => t.achievements[id] ? `🏅 ${t.achievements[id]}` : null)
+        .filter(Boolean)
+        .join('\n');
       resultEl.textContent = [
         `${t.dieText(roll)} ${t.decisionText(option.label)}`,
         impactLine,
