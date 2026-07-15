@@ -2,11 +2,14 @@ import {
   LANG,
   MAX_GAME_ROUNDS,
   randomInt,
-  shuffle,
   rollDie,
   applyImpact,
   hasMetNobelRequirements,
-  createInitialState
+  createInitialState,
+  buildQueue,
+  checkAchievements,
+  checkEarlyEnd,
+  snapshotStats
 } from './src/game-logic.js';
 
 const characterEl = document.getElementById('character');
@@ -19,6 +22,9 @@ const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 const langEsBtn = document.getElementById('lang-es');
 const langEnBtn = document.getElementById('lang-en');
+const achievementsPanelEl = document.getElementById('achievements-panel');
+const achievementsTitleEl = document.getElementById('achievements-title');
+const achievementsListEl = document.getElementById('achievements-list');
 
 let currentLang = 'es';
 
@@ -26,6 +32,32 @@ const state = createInitialState();
 
 function renderStats() {
   statsEl.textContent = LANG[currentLang].statsText(state);
+}
+
+/**
+ * Returns the translated label strings for the given achievement IDs.
+ * Defensively filters out IDs with no translation (e.g. an achievement
+ * added before the locale object was updated).
+ * @param {string[]} ids - Achievement IDs to look up.
+ * @param {Object} translations - The locale's achievements object.
+ * @returns {string[]} Translated labels for known IDs.
+ */
+function getAchievementLabels(ids, translations) {
+  return ids.filter((id) => translations[id]).map((id) => translations[id]);
+}
+
+function renderAchievements() {
+  const t = LANG[currentLang];
+  achievementsTitleEl.textContent = t.achievementsTitle;
+  const labels = getAchievementLabels(state.achievements, t.achievements);
+  if (labels.length === 0) {
+    achievementsListEl.innerHTML = `<li class="achievements-placeholder">${t.achievementsPlaceholder}</li>`;
+  } else {
+    achievementsListEl.innerHTML = labels
+      .map((label) => `<li class="achievement-item">${label}</li>`)
+      .join('');
+  }
+  achievementsPanelEl.hidden = false;
 }
 
 function hasMetNobel() {
@@ -44,6 +76,22 @@ function finishGame() {
   }
 
   resultEl.textContent = t.gameEndResult(state);
+  startBtn.hidden = true;
+  restartBtn.hidden = false;
+}
+
+function finishGameEarly(reason) {
+  const t = LANG[currentLang];
+  optionsEl.innerHTML = '';
+  if (reason === 'burnout') {
+    questionTitleEl.textContent = t.burnoutTitle;
+    questionEl.textContent = t.burnoutMsg;
+    resultEl.textContent = t.burnoutResult(state);
+  } else {
+    questionTitleEl.textContent = t.leftAcademiaTitle;
+    questionEl.textContent = t.leftAcademiaMsg;
+    resultEl.textContent = t.leftAcademiaResult(state);
+  }
   startBtn.hidden = true;
   restartBtn.hidden = false;
 }
@@ -69,10 +117,27 @@ function renderQuestion() {
         optionButton.disabled = true;
       });
       const roll = rollDie();
+      const before = snapshotStats(state);
       applyImpact(state, option.impact, roll);
+      const earlyEnd = checkEarlyEnd(state, option.exitAcademia === true);
+      const newAchievements = checkAchievements(state);
+      newAchievements.forEach((id) => state.achievements.push(id));
       const t = LANG[currentLang];
-      resultEl.textContent = `${t.dieText(roll)} ${t.decisionText(option.label)}`;
+      const impactLine = t.impactText(before, state);
+      const achievementLines = getAchievementLabels(newAchievements, t.achievements)
+        .map((label) => `🏅 ${label}`)
+        .join('\n');
+      resultEl.textContent = [
+        `${t.dieText(roll)} ${t.decisionText(option.label)}`,
+        impactLine,
+        achievementLines
+      ].filter(Boolean).join('\n');
       renderStats();
+      if (newAchievements.length > 0) renderAchievements();
+      if (earlyEnd) {
+        finishGameEarly(earlyEnd);
+        return;
+      }
       renderQuestion();
     });
     optionsEl.appendChild(button);
@@ -91,14 +156,19 @@ function startGame() {
   state.papers = 0;
   state.discoveries = 0;
   state.rounds = 0;
+  state.achievements = [];
   state.maxRounds = Math.min(MAX_GAME_ROUNDS, questions.length);
-  state.queue = shuffle(questions).slice(0, state.maxRounds);
+  state.queue = buildQueue(questions, state.maxRounds);
 
   const descriptor = t.genderDescriptors[state.gender];
   characterEl.textContent = t.characterIntro(descriptor, state.age);
   resultEl.textContent = t.dieIntro;
   startBtn.hidden = true;
   restartBtn.hidden = true;
+
+  achievementsListEl.innerHTML = `<li class="achievements-placeholder">${t.achievementsPlaceholder}</li>`;
+  achievementsTitleEl.textContent = t.achievementsTitle;
+  achievementsPanelEl.hidden = false;
 
   renderStats();
   renderQuestion();
@@ -112,6 +182,7 @@ function updateStaticUI() {
   document.getElementById('subtitle').textContent = t.subtitle;
   document.getElementById('character-title').textContent = t.characterSectionTitle;
   document.getElementById('result-title').textContent = t.resultSectionTitle;
+  achievementsTitleEl.textContent = t.achievementsTitle;
   startBtn.textContent = t.startBtnLabel;
   restartBtn.textContent = t.restartBtnLabel;
 
@@ -129,12 +200,14 @@ function switchLanguage(lang) {
   // Reset to initial pre-game state when language changes
   state.rounds = 0;
   state.queue = [];
+  state.achievements = [];
   characterEl.textContent = '';
   statsEl.textContent = '';
   questionTitleEl.textContent = LANG[currentLang].questionSectionStart;
   questionEl.textContent = LANG[currentLang].questionPlaceholder;
   optionsEl.innerHTML = '';
   resultEl.textContent = LANG[currentLang].resultPlaceholder;
+  achievementsPanelEl.hidden = true;
   startBtn.hidden = false;
   restartBtn.hidden = true;
 }
