@@ -475,7 +475,7 @@ export const ENDINGS = [
     },
     en: {
       name: 'Mateo Valero',
-      description: 'Expert in computational engineering. Your work on interconnection networks and processors is highly prestigious in the field of supercomputing. A high-impact technical career.'
+      description: 'Expert in computational engineering. Your work on interconnection networks and processors is highly recognised in the field of supercomputing. A high-impact technical career.'
     }
   },
   // ── LOW TIER ──────────────────────────────────────────────────────────────
@@ -666,7 +666,10 @@ export const ENDINGS = [
 function normalizePlayerGender(gender) {
   if (gender === 'mujer' || gender === 'woman') return 'female';
   if (gender === 'hombre' || gender === 'man') return 'male';
-  return 'nonbinary';
+  if (gender === 'persona no binaria' || gender === 'non-binary person') return 'nonbinary';
+  // Empty or unrecognised value: use a sentinel that matches no gender-specific
+  // ending so getEnding falls through to 'any'-gender or the best eligible entry.
+  return 'unknown';
 }
 
 function meetsEndingThreshold(state, ending) {

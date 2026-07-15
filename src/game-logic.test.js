@@ -354,13 +354,11 @@ describe('ENDINGS', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('every non-high tier has at least one catch-all ending (no extra threshold beyond tier qualification)', () => {
-    ['low'].forEach((tier) => {
-      const tierEntries = ENDINGS.filter((e) => e.tier === tier);
-      expect(tierEntries.length, `tier ${tier} has entries`).toBeGreaterThan(0);
-      const hasCatchAll = tierEntries.some((e) => e.minPrestige == null && e.maxPrestige == null);
-      expect(hasCatchAll, `tier ${tier} has a catch-all entry`).toBe(true);
-    });
+  it('low tier has a catch-all ending with no stat thresholds', () => {
+    const tierEntries = ENDINGS.filter((e) => e.tier === 'low');
+    expect(tierEntries.length).toBeGreaterThan(0);
+    const hasCatchAll = tierEntries.some((e) => e.minPrestige == null && e.maxPrestige == null);
+    expect(hasCatchAll, 'low tier has a catch-all entry').toBe(true);
   });
 
   it('all four tiers have at least one entry', () => {
@@ -519,7 +517,15 @@ describe('getEnding', () => {
   it('English gender strings are also recognised', () => {
     const stateW = makeState({ gender: 'woman', prestige: 75, papers: 6, discoveries: 2, wellbeing: 25 });
     const stateM = makeState({ gender: 'man', prestige: 75, papers: 6, discoveries: 2, wellbeing: 25 });
+    const stateNB = makeState({ gender: 'non-binary person', prestige: 75, papers: 6, discoveries: 2, wellbeing: 25 });
     expect(getEnding(stateW).gender).toBe('female');
     expect(getEnding(stateM).gender).toBe('male');
+    expect(getEnding(stateNB).tier).toBe('high');
+  });
+
+  it('unknown/empty gender falls back gracefully to an eligible ending', () => {
+    const state = makeState({ gender: '', prestige: 75, papers: 6, discoveries: 2, wellbeing: 25 });
+    const ending = getEnding(state);
+    expect(ending.tier).toBe('high');
   });
 });
