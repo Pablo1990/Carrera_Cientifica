@@ -5,7 +5,7 @@ import {
   rollDie,
   applyImpact,
   hasMetNobelRequirements,
-  getEnding
+  getEnding,
   createInitialState,
   buildQueue,
   checkAchievements,
