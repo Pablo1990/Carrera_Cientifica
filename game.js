@@ -7,7 +7,8 @@ import {
   hasMetNobelRequirements,
   createInitialState,
   buildQueue,
-  checkAchievements
+  checkAchievements,
+  snapshotStats
 } from './src/game-logic.js';
 
 const characterEl = document.getElementById('character');
@@ -86,7 +87,7 @@ function renderQuestion() {
         optionButton.disabled = true;
       });
       const roll = rollDie();
-      const before = { prestige: state.prestige, wellbeing: state.wellbeing, savings: state.savings, papers: state.papers, discoveries: state.discoveries };
+      const before = snapshotStats(state);
       applyImpact(state, option.impact, roll);
       const newAchievements = checkAchievements(state);
       newAchievements.forEach((id) => state.achievements.push(id));

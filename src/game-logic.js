@@ -14,6 +14,17 @@ export const ACHIEVEMENTS = [
   { id: 'wellbeing80',  condition: (s) => s.wellbeing >= 80 },
 ];
 
+function formatDelta(d) {
+  return `${d > 0 ? '+' : ''}${d}`;
+}
+
+function buildImpactText(labels, before, after) {
+  const deltas = labels
+    .filter(([, key]) => after[key] !== before[key])
+    .map(([label, key]) => `${label} ${formatDelta(after[key] - before[key])}`);
+  return deltas;
+}
+
 export const LANG = {
   es: {
     htmlLang: 'es',
@@ -55,14 +66,10 @@ export const LANG = {
     },
     decisionText: (label) => `Decidiste: "${label}"`,
     impactText: (before, after) => {
-      const deltas = [
-        ['Prestigio',  after.prestige    - before.prestige],
-        ['Bienestar',  after.wellbeing   - before.wellbeing],
-        ['Ahorros',    after.savings     - before.savings],
-        ['Papers',     after.papers      - before.papers],
-        ['Hallazgos',  after.discoveries - before.discoveries],
-      ].filter(([, d]) => d !== 0)
-       .map(([label, d]) => `${label} ${d > 0 ? '+' : ''}${d}`);
+      const deltas = buildImpactText(
+        [['Prestigio', 'prestige'], ['Bienestar', 'wellbeing'], ['Ahorros', 'savings'], ['Papers', 'papers'], ['Hallazgos', 'discoveries']],
+        before, after
+      );
       return deltas.length ? `📊 Cambios: ${deltas.join(' · ')}` : '📊 Sin cambios en estadísticas.';
     },
     statsText: (s) =>
@@ -206,14 +213,10 @@ export const LANG = {
     },
     decisionText: (label) => `You chose: "${label}"`,
     impactText: (before, after) => {
-      const deltas = [
-        ['Prestige',    after.prestige    - before.prestige],
-        ['Wellbeing',   after.wellbeing   - before.wellbeing],
-        ['Savings',     after.savings     - before.savings],
-        ['Papers',      after.papers      - before.papers],
-        ['Discoveries', after.discoveries - before.discoveries],
-      ].filter(([, d]) => d !== 0)
-       .map(([label, d]) => `${label} ${d > 0 ? '+' : ''}${d}`);
+      const deltas = buildImpactText(
+        [['Prestige', 'prestige'], ['Wellbeing', 'wellbeing'], ['Savings', 'savings'], ['Papers', 'papers'], ['Discoveries', 'discoveries']],
+        before, after
+      );
       return deltas.length ? `📊 Changes: ${deltas.join(' · ')}` : '📊 No stat changes.';
     },
     statsText: (s) =>
@@ -398,4 +401,14 @@ export function checkAchievements(state) {
   return ACHIEVEMENTS
     .filter((a) => !state.achievements.includes(a.id) && a.condition(state))
     .map((a) => a.id);
+}
+
+export function snapshotStats(state) {
+  return {
+    prestige: state.prestige,
+    wellbeing: state.wellbeing,
+    savings: state.savings,
+    papers: state.papers,
+    discoveries: state.discoveries
+  };
 }
