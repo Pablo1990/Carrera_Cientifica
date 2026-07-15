@@ -2,7 +2,7 @@
 
 Videojuego web corto (en español e inglés) para adolescentes sobre decisiones reales en la carrera científica.
 
-Juega en línea: **https://pablo1990.github.io/Carrera_Cientifica/**
+Juega en línea: **https://carrera-cientifica.netlify.app/**
 
 ## Cómo jugar / How to play
 
