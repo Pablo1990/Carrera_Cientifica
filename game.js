@@ -5,6 +5,7 @@ import {
   rollDie,
   applyImpact,
   hasMetNobelRequirements,
+  getEnding,
   createInitialState,
   buildQueue,
   checkAchievements,
@@ -22,6 +23,11 @@ const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 const langEsBtn = document.getElementById('lang-es');
 const langEnBtn = document.getElementById('lang-en');
+const endingPanelEl = document.getElementById('ending-panel');
+const endingCharacterLabelEl = document.getElementById('ending-character-label');
+const endingPhotoEl = document.getElementById('ending-photo');
+const endingNameEl = document.getElementById('ending-name');
+const endingDescriptionEl = document.getElementById('ending-description');
 const achievementsPanelEl = document.getElementById('achievements-panel');
 const achievementsTitleEl = document.getElementById('achievements-title');
 const achievementsListEl = document.getElementById('achievements-list');
@@ -76,6 +82,26 @@ function finishGame() {
   }
 
   resultEl.textContent = t.gameEndResult(state);
+
+  // Show ending character card
+  const ending = getEnding(state);
+  const endingText = ending[currentLang];
+  endingCharacterLabelEl.textContent = t.endingCharacterLabel;
+  endingNameEl.textContent = endingText.name;
+  endingDescriptionEl.textContent = endingText.description;
+
+  if (ending.photo) {
+    endingPhotoEl.src = ending.photo;
+    endingPhotoEl.alt = endingText.name;
+    endingPhotoEl.hidden = false;
+    endingPhotoEl.onerror = () => {
+      endingPhotoEl.hidden = true;
+    };
+  } else {
+    endingPhotoEl.hidden = true;
+  }
+  endingPanelEl.hidden = false;
+
   startBtn.hidden = true;
   restartBtn.hidden = false;
 }
@@ -165,6 +191,7 @@ function startGame() {
   resultEl.textContent = t.dieIntro;
   startBtn.hidden = true;
   restartBtn.hidden = true;
+  endingPanelEl.hidden = true;
 
   achievementsListEl.innerHTML = `<li class="achievements-placeholder">${t.achievementsPlaceholder}</li>`;
   achievementsTitleEl.textContent = t.achievementsTitle;
@@ -207,6 +234,7 @@ function switchLanguage(lang) {
   questionEl.textContent = LANG[currentLang].questionPlaceholder;
   optionsEl.innerHTML = '';
   resultEl.textContent = LANG[currentLang].resultPlaceholder;
+  endingPanelEl.hidden = true;
   achievementsPanelEl.hidden = true;
   startBtn.hidden = false;
   restartBtn.hidden = true;
