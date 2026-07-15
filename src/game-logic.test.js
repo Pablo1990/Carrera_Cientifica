@@ -5,6 +5,7 @@ import {
   MIN_SAVINGS,
   NOBEL_REQUIREMENTS,
   MAX_GAME_ROUNDS,
+  BURNOUT_THRESHOLD,
   ACHIEVEMENTS,
   randomInt,
   shuffle,
@@ -14,7 +15,8 @@ import {
   hasMetNobelRequirements,
   createInitialState,
   buildQueue,
-  checkAchievements
+  checkAchievements,
+  checkEarlyEnd
 } from './game-logic.js';
 
 // ---------------------------------------------------------------------------
@@ -46,9 +48,13 @@ describe('LANG', () => {
     'characterSectionTitle', 'questionSectionStart', 'questionPlaceholder',
     'resultSectionTitle', 'resultPlaceholder', 'startBtnLabel', 'restartBtnLabel',
     'dieIntro', 'gameEndTitle', 'nobelWin', 'nobelLose',
-    'achievementsTitle', 'achievementsPlaceholder'
+    'achievementsTitle', 'achievementsPlaceholder',
+    'leftAcademiaTitle', 'leftAcademiaMsg', 'burnoutTitle', 'burnoutMsg'
   ];
-  const requiredFnKeys = ['characterIntro', 'dieText', 'decisionText', 'statsText', 'gameEndResult', 'impactText'];
+  const requiredFnKeys = [
+    'characterIntro', 'dieText', 'decisionText', 'statsText', 'gameEndResult', 'impactText',
+    'leftAcademiaResult', 'burnoutResult'
+  ];
 
   it.each(['es', 'en'])('LANG.%s has all required string keys', (lang) => {
     requiredStringKeys.forEach((key) => {
@@ -159,13 +165,22 @@ it('ES and EN have the same number of questions', () => {
   expect(LANG.es.questions.length).toBe(LANG.en.questions.length);
 });
 
-it.each(['es', 'en'])('LANG.%s: exactly one question is marked alwaysFirst', (lang) => {
-  const fixed = LANG[lang].questions.filter((q) => q.alwaysFirst);
-  expect(fixed.length).toBe(1);
+it.each(['es', 'en'])('LANG.%s: every question has a numeric order property', (lang) => {
+  LANG[lang].questions.forEach((q) => {
+    expect(typeof q.order, `question "${q.title}" missing order`).toBe('number');
+  });
 });
 
-it.each(['es', 'en'])('LANG.%s: the alwaysFirst question is at index 0', (lang) => {
-  expect(LANG[lang].questions[0].alwaysFirst).toBe(true);
+it.each(['es', 'en'])('LANG.%s: question orders are 1..N without gaps', (lang) => {
+  const orders = LANG[lang].questions.map((q) => q.order).sort((a, b) => a - b);
+  orders.forEach((order, i) => expect(order).toBe(i + 1));
+});
+
+it.each(['es', 'en'])('LANG.%s: at least one option per question may exit academia', (lang) => {
+  const exitQuestions = LANG[lang].questions.flatMap((q) =>
+    q.options.filter((o) => o.exitAcademia === true)
+  );
+  expect(exitQuestions.length).toBeGreaterThan(0);
 });
 
 // ---------------------------------------------------------------------------
@@ -387,11 +402,11 @@ describe('randomInt', () => {
 // ---------------------------------------------------------------------------
 describe('buildQueue', () => {
   const questions = [
-    { alwaysFirst: true, title: 'A' },
-    { title: 'B' },
-    { title: 'C' },
-    { title: 'D' },
-    { title: 'E' },
+    { order: 1, title: 'A' },
+    { order: 2, title: 'B' },
+    { order: 3, title: 'C' },
+    { order: 4, title: 'D' },
+    { order: 5, title: 'E' },
   ];
 
   it('returns an array of the requested length', () => {
@@ -399,28 +414,29 @@ describe('buildQueue', () => {
     expect(q).toHaveLength(4);
   });
 
-  it('puts the alwaysFirst question at the END of the queue (shown first via .pop())', () => {
+  it('puts the order-1 question at the END of the queue (shown first via .pop())', () => {
     const q = buildQueue(questions, 4);
-    expect(q[q.length - 1].alwaysFirst).toBe(true);
+    expect(q[q.length - 1].order).toBe(1);
   });
 
-  it('always includes every alwaysFirst question', () => {
-    for (let i = 0; i < 20; i++) {
-      const q = buildQueue(questions, 4);
-      const titles = q.map((item) => item.title);
-      expect(titles).toContain('A');
-    }
+  it('queue is in ascending order from the end: pop() gives 1, 2, 3, …', () => {
+    const q = buildQueue(questions, 4);
+    expect(q[q.length - 1].order).toBe(1);
+    expect(q[q.length - 2].order).toBe(2);
+    expect(q[q.length - 3].order).toBe(3);
   });
 
-  it('does not exceed maxRounds when fixed.length equals maxRounds', () => {
-    const questionsAllFixed = [
-      { alwaysFirst: true, title: 'X' },
-      { alwaysFirst: true, title: 'Y' },
-      { title: 'Z' },
-    ];
-    const q = buildQueue(questionsAllFixed, 2);
-    expect(q).toHaveLength(2);
-    expect(q.every((item) => item.alwaysFirst)).toBe(true);
+  it('is deterministic: same result on every call', () => {
+    const q1 = buildQueue(questions, 5).map((item) => item.order);
+    const q2 = buildQueue(questions, 5).map((item) => item.order);
+    expect(q1).toEqual(q2);
+  });
+
+  it('respects maxRounds when smaller than questions.length', () => {
+    const q = buildQueue(questions, 3);
+    expect(q).toHaveLength(3);
+    const orders = q.map((item) => item.order).sort((a, b) => a - b);
+    expect(orders).toEqual([1, 2, 3]);
   });
 
   it('does not mutate the original questions array', () => {
@@ -481,5 +497,49 @@ describe('checkAchievements', () => {
       expect(typeof id).toBe('string');
       expect(typeof condition).toBe('function');
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkEarlyEnd
+// ---------------------------------------------------------------------------
+describe('checkEarlyEnd', () => {
+  it('returns null for a healthy state with no exit option', () => {
+    const state = createInitialState();
+    expect(checkEarlyEnd(state)).toBeNull();
+  });
+
+  it('returns "burnout" when wellbeing equals BURNOUT_THRESHOLD', () => {
+    const state = createInitialState();
+    state.wellbeing = BURNOUT_THRESHOLD;
+    expect(checkEarlyEnd(state)).toBe('burnout');
+  });
+
+  it('returns "burnout" when wellbeing is below BURNOUT_THRESHOLD', () => {
+    const state = createInitialState();
+    state.wellbeing = BURNOUT_THRESHOLD - 1;
+    expect(checkEarlyEnd(state)).toBe('burnout');
+  });
+
+  it('returns null when wellbeing is one above BURNOUT_THRESHOLD', () => {
+    const state = createInitialState();
+    state.wellbeing = BURNOUT_THRESHOLD + 1;
+    expect(checkEarlyEnd(state)).toBeNull();
+  });
+
+  it('returns "leftAcademia" when option exits academia and wellbeing is healthy', () => {
+    const state = createInitialState();
+    expect(checkEarlyEnd(state, true)).toBe('leftAcademia');
+  });
+
+  it('"burnout" takes priority over "leftAcademia"', () => {
+    const state = createInitialState();
+    state.wellbeing = BURNOUT_THRESHOLD;
+    expect(checkEarlyEnd(state, true)).toBe('burnout');
+  });
+
+  it('returns null when optionExitsAcademia is false and wellbeing is healthy', () => {
+    const state = createInitialState();
+    expect(checkEarlyEnd(state, false)).toBeNull();
   });
 });

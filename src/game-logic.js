@@ -2,6 +2,8 @@ export const DIE_FACTOR_BY_ROLL = { 1: 0.45, 2: 0.75, 3: 1, 4: 1.15, 5: 1.35, 6:
 export const MIN_SAVINGS = -10;
 export const NOBEL_REQUIREMENTS = { prestige: 70, papers: 6, discoveries: 2, wellbeing: 20 };
 export const MAX_GAME_ROUNDS = 10;
+/** Wellbeing at or below this value triggers a forced burnout game-over. */
+export const BURNOUT_THRESHOLD = 10;
 
 export const ACHIEVEMENTS = [
   { id: 'degree',       condition: (s) => s.rounds >= 1 },
@@ -91,96 +93,113 @@ export const LANG = {
     nobelLose: 'No llegó el Nobel esta vez, pero construiste una carrera real: con aprendizaje, tropiezos y logros.',
     gameEndResult: (s) =>
       `Cierre: terminaste con ${s.papers} papers y ${s.discoveries} descubrimientos. La ciencia es una maratón, no un sprint.`,
+    leftAcademiaTitle: 'Nueva etapa fuera de la academia',
+    leftAcademiaMsg: 'Elegiste salir de la academia. No toda carrera científica termina en un laboratorio: muchos exinvestigadores transforman el mundo desde la empresa, la política o la educación. Fue una decisión valiente y completamente legítima.',
+    leftAcademiaResult: (s) =>
+      `Saliste en la ronda ${s.rounds}. Acumulaste ${s.papers} papers y ${s.discoveries} descubrimientos. El conocimiento que adquiriste te acompañará siempre.`,
+    burnoutTitle: 'Burnout: el límite del cuerpo y la mente',
+    burnoutMsg: 'La presión acumulada te pasó factura. El burnout científico afecta a casi la mitad de las personas en investigación. Parar a tiempo también es sabiduría: tu bienestar importa más que cualquier paper.',
+    burnoutResult: (s) =>
+      `Tu bienestar llegó al límite en la ronda ${s.rounds}. Con ${s.papers} papers y ${s.discoveries} descubrimientos, dejaste huella aunque el camino se cortó antes de lo esperado.`,
     questions: [
       {
-        alwaysFirst: true,
+        order: 1,
         title: 'Primera gran decisión',
-        text: 'Tienes 18 años y toca elegir carrera. ¿Qué te llama más?',
+        text: 'Tienes 18 años. La selectividad ha quedado atrás y llega el momento de elegir tu carrera. ¿Qué camino científico escoges?',
         options: [
-          { label: 'Biología: te flipa entender la vida.', impact: { prestige: 7, wellbeing: 1, papers: 1 } },
-          { label: 'Física: quieres explicar el universo.', impact: { prestige: 8, wellbeing: -1, papers: 1 } },
-          { label: 'Ingeniería biomédica: ciencia aplicada.', impact: { prestige: 6, savings: 2, papers: 0 } }
+          { label: 'Biología: te fascina el origen de la vida y la célula.', impact: { prestige: 6, wellbeing: 2 } },
+          { label: 'Física: quieres descifrar las leyes del universo.', impact: { prestige: 7 } },
+          { label: 'Ingeniería biomédica: ciencia con impacto real e inmediato.', impact: { prestige: 5, savings: 2 } }
         ]
       },
       {
-        title: 'Duda real',
-        text: '¿Si elijo una carrera universitaria, puedo cambiar después?',
+        order: 2,
+        title: 'El trabajo de fin de grado',
+        text: 'En tu último año de carrera, un profesor te invita a su laboratorio para el TFG. Es tu primera chispa real de investigación. ¿Qué haces?',
         options: [
-          { label: 'Sí. Cambias de área con un máster puente.', impact: { prestige: 4, wellbeing: 3, savings: -1 } },
-          { label: 'No cambio por miedo a perder tiempo.', impact: { prestige: 1, wellbeing: -2, savings: 1 } },
-          { label: 'Pruebo prácticas antes de decidir.', impact: { prestige: 3, wellbeing: 2, savings: 1 } }
+          { label: 'Me implico a fondo: quiero publicar algo aunque me cueste noches.', impact: { prestige: 5, wellbeing: -1, papers: 1 } },
+          { label: 'Lo hago bien pero sin obsesionarme; equilibro vida y ciencia.', impact: { prestige: 3, wellbeing: 3 } },
+          { label: 'Me doy cuenta de que no es lo mío y busco trabajo fuera.', impact: { wellbeing: 3, savings: 3 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Supervisor complicado',
-        text: 'Empiezas el doctorado y tu supervisión es dura y confusa.',
+        order: 3,
+        title: '¿Doctorado o mercado laboral?',
+        text: 'Tu directora de TFG queda encantada contigo y te ofrece una beca de doctorado. Son cuatro años, sueldo bajo y mucha incertidumbre. ¿Aceptas?',
         options: [
-          { label: 'Busco mentores alternativos y red de apoyo.', impact: { prestige: 5, wellbeing: 2, papers: 1 } },
-          { label: 'Aguanto en silencio.', impact: { prestige: 2, wellbeing: -4, papers: 1 } },
-          { label: 'Pido cambio formal de supervisor.', impact: { prestige: 3, wellbeing: 3, savings: -1 } }
+          { label: 'Acepto. Quiero llegar lejos en la ciencia.', impact: { prestige: 8, savings: -3, papers: 1 } },
+          { label: 'Me lo pienso y busco opciones mixtas entre academia e industria.', impact: { prestige: 4, savings: 1 } },
+          { label: 'Rechazo. Prefiero estabilidad y un buen sueldo ya.', impact: { savings: 5, wellbeing: 4 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Precariedad científica',
-        text: 'Te ofrecen contrato corto con sueldo justo. ¿Qué haces?',
+        order: 4,
+        title: 'Los primeros experimentos',
+        text: 'Llevas un año en el doctorado y los experimentos no salen como esperabas. El fracaso se repite semana tras semana. ¿Cómo gestionas la frustración?',
         options: [
-          { label: 'Lo acepto para seguir investigando.', impact: { prestige: 4, wellbeing: -2, savings: -2, papers: 1 } },
-          { label: 'Negocio condiciones y formación.', impact: { prestige: 3, wellbeing: 1, savings: 1 } },
-          { label: 'Me paso temporalmente a industria.', impact: { prestige: 2, wellbeing: 2, savings: 4 } }
+          { label: 'Busco ayuda y reformulo la hipótesis con calma y método.', impact: { prestige: 6, wellbeing: 2, papers: 1 } },
+          { label: 'Me encierro y trabajo el doble de horas para compensar.', impact: { prestige: 5, wellbeing: -7, papers: 1 } },
+          { label: 'Hablo con compañeros de doctorado: descubro que no soy el único.', impact: { prestige: 3, wellbeing: 4 } }
         ]
       },
       {
-        title: 'Migrar al Reino Unido',
-        text: 'Te planteas mudarte al Reino Unido para investigar.',
+        order: 5,
+        title: 'Crisis con el supervisor',
+        text: 'Tu supervisor lleva meses ignorando tu trabajo y minimizando tus ideas. Estás al límite. Una colega te dice: "Denuncia, lo que hace no está bien."',
         options: [
-          { label: 'Me mudo: más recursos, pero papeleo y nostalgia.', impact: { prestige: 7, wellbeing: -1, savings: -1, papers: 1 } },
-          { label: 'No me mudo: mantengo red local.', impact: { prestige: 2, wellbeing: 2, savings: 1 } },
-          { label: 'Voy con plan de regreso y contactos.', impact: { prestige: 6, wellbeing: 1, savings: -1, papers: 1 } }
+          { label: 'Pido formalmente un cambio de supervisor.', impact: { prestige: 4, wellbeing: 3, savings: -1 } },
+          { label: 'Aguanto en silencio. Seguro que mejora...', impact: { prestige: 1, wellbeing: -10 } },
+          { label: 'No puedo más con esto. Dejo el doctorado.', impact: { wellbeing: 6, savings: 2 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Conferencia internacional',
-        text: '¡Te invitan a una conferencia al otro lado del mundo!',
+        order: 6,
+        title: 'La defensa de tesis',
+        text: 'Llegó el gran día. Cuatro años condensados en 200 páginas y 45 minutos ante el tribunal. Es el momento de defender quién eres como investigador/a.',
         options: [
-          { label: 'Presento mi trabajo y hago networking.', impact: { prestige: 8, wellbeing: 1, savings: -1, papers: 1 } },
-          { label: 'No voy: ahorro y descanso.', impact: { prestige: -1, wellbeing: 3, savings: 2 } },
-          { label: 'Asisto online y contacto por correo.', impact: { prestige: 3, wellbeing: 2, savings: 1 } }
+          { label: 'Me preparo a fondo y defiendo con seguridad y pasión.', impact: { prestige: 10, wellbeing: 3, papers: 1, discoveries: 1 } },
+          { label: 'Los nervios me bloquean y respondo con dudas ante el tribunal.', impact: { prestige: 4, wellbeing: -2 } },
+          { label: 'Presento los datos honestamente, sin adornos, con rigor.', impact: { prestige: 7, wellbeing: 2, papers: 1 } }
         ]
       },
       {
-        title: 'Paper bajo presión',
-        text: 'Te exigen publicar rápido. Tus datos no son tan claros.',
+        order: 7,
+        title: 'El primer postdoc',
+        text: 'Con el doctorado en la mano, te llega una oferta de postdoc en el extranjero. Más recursos, pero lejos de todo lo conocido. ¿Qué haces?',
         options: [
-          { label: 'Repito experimentos y publico tarde pero sólido.', impact: { prestige: 7, wellbeing: -1, papers: 1 } },
-          { label: 'Publico corriendo para competir.', impact: { prestige: 1, wellbeing: -2, papers: 1 } },
-          { label: 'Comparto dudas con el equipo y redefino hipótesis.', impact: { prestige: 6, wellbeing: 1, papers: 1 } }
+          { label: 'Me mudo: la movilidad internacional abre puertas clave.', impact: { prestige: 9, wellbeing: -2, savings: -2, papers: 1 } },
+          { label: 'Prefiero un postdoc local; cuido mi red de apoyo.', impact: { prestige: 5, wellbeing: 3 } },
+          { label: 'Acepto un trabajo en industria. La academia puede esperar.', impact: { savings: 6, wellbeing: 5 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Hallazgo inesperado',
-        text: 'En un experimento aparece una señal rarísima. ¿Qué haces?',
+        order: 8,
+        title: 'La lucha por financiación',
+        text: 'Tu contrato postdoctoral termina en dos meses. No hay proyecto nuevo. El laboratorio se queda sin fondos. ¿Cómo sobrevives?',
         options: [
-          { label: 'La investigo con rigor: podría ser descubrimiento.', impact: { prestige: 10, wellbeing: 1, discoveries: 1 } },
-          { label: 'La ignoro porque no estaba en el plan.', impact: { prestige: -2, wellbeing: 0 } },
-          { label: 'Pido revisión externa antes de anunciar nada.', impact: { prestige: 7, wellbeing: 1, discoveries: 1 } }
+          { label: 'Me lanzo a escribir una propuesta de proyecto competitivo.', impact: { prestige: 7, wellbeing: -5, papers: 1 } },
+          { label: 'Busco colaboración con un grupo que tenga financiación.', impact: { prestige: 5, savings: 2, wellbeing: 1 } },
+          { label: 'Sin fondos ni perspectivas, dejo la ciencia.', impact: { wellbeing: 3, savings: 4 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Ciencia e industria',
-        text: 'Una empresa te ofrece liderar I+D con buen sueldo.',
+        order: 9,
+        title: 'El hallazgo inesperado',
+        text: 'En un experimento de rutina aparece una señal que no cuadra con nada conocido. Podría ser ruido... o el descubrimiento de tu vida. ¿Qué haces?',
         options: [
-          { label: 'Acepto y mantengo colaboración académica.', impact: { prestige: 5, wellbeing: 2, savings: 5, papers: 1 } },
-          { label: 'Rechazo y sigo a tope en academia.', impact: { prestige: 4, wellbeing: -1, savings: -1, papers: 1 } },
-          { label: 'Me voy y vuelvo luego a la universidad.', impact: { prestige: 3, wellbeing: 1, savings: 3 } }
+          { label: 'Lo investigo con rigor: replico, valido y documento todo.', impact: { prestige: 12, wellbeing: 2, discoveries: 1 } },
+          { label: 'Anuncio el descubrimiento antes de validarlo para adelantarme.', impact: { prestige: 3, wellbeing: -3, papers: 1 } },
+          { label: 'Pido una revisión externa antes de publicar absolutamente nada.', impact: { prestige: 9, wellbeing: 1, discoveries: 1, papers: 1 } }
         ]
       },
       {
-        title: 'Pensamiento crítico',
-        text: 'Un resultado viral contradice tu línea. ¿Cómo reaccionas?',
+        order: 10,
+        title: 'El camino al Nobel',
+        text: 'El Comité Nobel empieza a citar tu trabajo. Estás en el círculo de los grandes. Este es el momento de dejar tu huella definitiva en la ciencia.',
         options: [
-          { label: 'Reviso sesgos, métodos y datos antes de opinar.', impact: { prestige: 7, wellbeing: 1, papers: 1 } },
-          { label: 'Ataco el estudio en redes sin leerlo.', impact: { prestige: -5, wellbeing: -1 } },
-          { label: 'Organizo debate con colegas y estudiantes.', impact: { prestige: 6, wellbeing: 2 } }
+          { label: 'Publico el paper que lo cambia todo y doy conferencias globales.', impact: { prestige: 15, papers: 2, discoveries: 1 } },
+          { label: 'Me centro en mentorizar a la siguiente generación de científicos.', impact: { wellbeing: 10, prestige: 8 } },
+          { label: 'Fusiono mi investigación con aplicaciones que salvan vidas.', impact: { prestige: 12, discoveries: 1, wellbeing: 5, papers: 1 } }
         ]
       }
     ]
@@ -238,96 +257,113 @@ export const LANG = {
     nobelLose: "The Nobel didn't come this time, but you built a real career: with learning, setbacks, and achievements.",
     gameEndResult: (s) =>
       `Closing: you finished with ${s.papers} papers and ${s.discoveries} discoveries. Science is a marathon, not a sprint.`,
+    leftAcademiaTitle: 'A new chapter outside academia',
+    leftAcademiaMsg: "You chose to leave academia. Not every scientific career ends in a lab: many former researchers transform the world through industry, policy, or education. It was a brave and completely legitimate decision.",
+    leftAcademiaResult: (s) =>
+      `You left in round ${s.rounds}. You accumulated ${s.papers} papers and ${s.discoveries} discoveries. The knowledge you gained will always stay with you.`,
+    burnoutTitle: 'Burnout: the limit of body and mind',
+    burnoutMsg: 'The accumulated pressure took its toll. Scientific burnout affects almost half of all researchers. Knowing when to stop is also wisdom: your wellbeing matters more than any paper.',
+    burnoutResult: (s) =>
+      `Your wellbeing reached its limit in round ${s.rounds}. With ${s.papers} papers and ${s.discoveries} discoveries, you left your mark even though the journey was cut short.`,
     questions: [
       {
-        alwaysFirst: true,
+        order: 1,
         title: 'First big decision',
-        text: 'You are 18 years old and it is time to choose a degree. What calls to you?',
+        text: 'You are 18 years old. Exams are behind you and it is time to choose your degree. Which scientific path do you take?',
         options: [
-          { label: 'Biology: you love understanding life.', impact: { prestige: 7, wellbeing: 1, papers: 1 } },
-          { label: 'Physics: you want to explain the universe.', impact: { prestige: 8, wellbeing: -1, papers: 1 } },
-          { label: 'Biomedical Engineering: applied science.', impact: { prestige: 6, savings: 2, papers: 0 } }
+          { label: 'Biology: you are fascinated by the origin of life and the cell.', impact: { prestige: 6, wellbeing: 2 } },
+          { label: 'Physics: you want to decode the laws of the universe.', impact: { prestige: 7 } },
+          { label: 'Biomedical Engineering: science with immediate real impact.', impact: { prestige: 5, savings: 2 } }
         ]
       },
       {
-        title: 'Real doubt',
-        text: 'If I choose a degree, can I switch to a different field later?',
+        order: 2,
+        title: 'Final year project',
+        text: 'In your final year, a professor invites you to their lab for your thesis project. It is your first real spark of research. What do you do?',
         options: [
-          { label: "Yes. You switch fields with a bridge master's.", impact: { prestige: 4, wellbeing: 3, savings: -1 } },
-          { label: "I won't switch out of fear of wasting time.", impact: { prestige: 1, wellbeing: -2, savings: 1 } },
-          { label: 'I try internships before deciding.', impact: { prestige: 3, wellbeing: 2, savings: 1 } }
+          { label: 'I go all in: I want to publish something even if it costs me nights.', impact: { prestige: 5, wellbeing: -1, papers: 1 } },
+          { label: 'I do it well but without obsessing; I balance life and science.', impact: { prestige: 3, wellbeing: 3 } },
+          { label: 'I realise research is not for me and look for a job outside.', impact: { wellbeing: 3, savings: 3 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Difficult supervisor',
-        text: 'You start your PhD and your supervision is tough and confusing.',
+        order: 3,
+        title: 'PhD or job market?',
+        text: 'Your thesis supervisor is impressed and offers you a PhD scholarship. Four years, low pay, lots of uncertainty. Do you accept?',
         options: [
-          { label: 'I seek alternative mentors and a support network.', impact: { prestige: 5, wellbeing: 2, papers: 1 } },
-          { label: 'I endure in silence.', impact: { prestige: 2, wellbeing: -4, papers: 1 } },
-          { label: 'I formally request a change of supervisor.', impact: { prestige: 3, wellbeing: 3, savings: -1 } }
+          { label: 'I accept. I want to go far in science.', impact: { prestige: 8, savings: -3, papers: 1 } },
+          { label: 'I think it over and look for hybrid options between academia and industry.', impact: { prestige: 4, savings: 1 } },
+          { label: 'I decline. I prefer stability and a good salary now.', impact: { savings: 5, wellbeing: 4 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Scientific precarity',
-        text: 'You are offered a short contract with a fair wage. What do you do?',
+        order: 4,
+        title: 'First experiments',
+        text: 'You have been doing your PhD for a year and the experiments keep failing week after week. How do you handle the frustration?',
         options: [
-          { label: 'I accept it to keep doing research.', impact: { prestige: 4, wellbeing: -2, savings: -2, papers: 1 } },
-          { label: 'I negotiate terms and training.', impact: { prestige: 3, wellbeing: 1, savings: 1 } },
-          { label: 'I temporarily move to industry.', impact: { prestige: 2, wellbeing: 2, savings: 4 } }
+          { label: 'I seek help and calmly reformulate the hypothesis with method.', impact: { prestige: 6, wellbeing: 2, papers: 1 } },
+          { label: 'I lock myself away and work twice as hard to compensate.', impact: { prestige: 5, wellbeing: -7, papers: 1 } },
+          { label: 'I talk to fellow PhD students: I discover I am not alone.', impact: { prestige: 3, wellbeing: 4 } }
         ]
       },
       {
-        title: 'Moving to the UK',
-        text: 'You are considering moving to the UK to do research.',
+        order: 5,
+        title: 'Supervisor crisis',
+        text: 'Your supervisor has been ignoring your work for months, dismissing your ideas. You are at your limit. A colleague says: "Report them. What they are doing is not okay."',
         options: [
-          { label: 'I move: more resources, but paperwork and homesickness.', impact: { prestige: 7, wellbeing: -1, savings: -1, papers: 1 } },
-          { label: "I don't move: I keep my local network.", impact: { prestige: 2, wellbeing: 2, savings: 1 } },
-          { label: 'I go with a return plan and contacts.', impact: { prestige: 6, wellbeing: 1, savings: -1, papers: 1 } }
+          { label: 'I formally request a change of supervisor.', impact: { prestige: 4, wellbeing: 3, savings: -1 } },
+          { label: 'I endure in silence. It will get better...', impact: { prestige: 1, wellbeing: -10 } },
+          { label: "I can't take it anymore. I quit the PhD.", impact: { wellbeing: 6, savings: 2 }, exitAcademia: true }
         ]
       },
       {
-        title: 'International conference',
-        text: 'You are invited to a conference on the other side of the world!',
+        order: 6,
+        title: 'The thesis defence',
+        text: 'The big day has arrived. Four years compressed into 200 pages and 45 minutes before the committee. It is time to defend who you are as a researcher.',
         options: [
-          { label: 'I present my work and network.', impact: { prestige: 8, wellbeing: 1, savings: -1, papers: 1 } },
-          { label: "I don't go: I save money and rest.", impact: { prestige: -1, wellbeing: 3, savings: 2 } },
-          { label: 'I attend online and reach out by email.', impact: { prestige: 3, wellbeing: 2, savings: 1 } }
+          { label: 'I prepare thoroughly and defend with confidence and passion.', impact: { prestige: 10, wellbeing: 3, papers: 1, discoveries: 1 } },
+          { label: 'Nerves get the better of me and I answer with hesitation.', impact: { prestige: 4, wellbeing: -2 } },
+          { label: 'I present the data honestly, without embellishment, with rigour.', impact: { prestige: 7, wellbeing: 2, papers: 1 } }
         ]
       },
       {
-        title: 'Paper under pressure',
-        text: 'You are pressed to publish quickly. Your data is not that clear.',
+        order: 7,
+        title: 'First postdoc',
+        text: 'With your PhD in hand, you receive a postdoc offer abroad. More resources, but far from everything familiar. What do you do?',
         options: [
-          { label: 'I repeat experiments and publish late but solid.', impact: { prestige: 7, wellbeing: -1, papers: 1 } },
-          { label: 'I rush to publish to compete.', impact: { prestige: 1, wellbeing: -2, papers: 1 } },
-          { label: 'I share doubts with the team and redefine the hypothesis.', impact: { prestige: 6, wellbeing: 1, papers: 1 } }
+          { label: 'I move: international mobility opens key doors.', impact: { prestige: 9, wellbeing: -2, savings: -2, papers: 1 } },
+          { label: 'I prefer a local postdoc, close to my support network.', impact: { prestige: 5, wellbeing: 3 } },
+          { label: 'I take an industry job. Academia can wait.', impact: { savings: 6, wellbeing: 5 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Unexpected finding',
-        text: 'A very unusual signal appears in an experiment. What do you do?',
+        order: 8,
+        title: 'The funding battle',
+        text: 'Your postdoc contract ends in two months. There is no new project. The lab is running out of money. How do you survive?',
         options: [
-          { label: 'I investigate it rigorously: it could be a discovery.', impact: { prestige: 10, wellbeing: 1, discoveries: 1 } },
-          { label: 'I ignore it because it was not in the plan.', impact: { prestige: -2, wellbeing: 0 } },
-          { label: 'I request an external review before announcing anything.', impact: { prestige: 7, wellbeing: 1, discoveries: 1 } }
+          { label: 'I write a competitive research grant proposal.', impact: { prestige: 7, wellbeing: -5, papers: 1 } },
+          { label: 'I seek collaboration with a well-funded research group.', impact: { prestige: 5, savings: 2, wellbeing: 1 } },
+          { label: 'With no funds and no prospects, I leave academia.', impact: { wellbeing: 3, savings: 4 }, exitAcademia: true }
         ]
       },
       {
-        title: 'Science and industry',
-        text: 'A company offers you to lead R&D with a good salary.',
+        order: 9,
+        title: 'The unexpected finding',
+        text: 'During a routine experiment, an anomalous signal appears that does not fit anything known. It could be noise... or the discovery of your life.',
         options: [
-          { label: 'I accept and maintain academic collaboration.', impact: { prestige: 5, wellbeing: 2, savings: 5, papers: 1 } },
-          { label: 'I decline and stay fully committed to academia.', impact: { prestige: 4, wellbeing: -1, savings: -1, papers: 1 } },
-          { label: 'I leave and return to university later.', impact: { prestige: 3, wellbeing: 1, savings: 3 } }
+          { label: 'I investigate it rigorously: I replicate, validate and document everything.', impact: { prestige: 12, wellbeing: 2, discoveries: 1 } },
+          { label: 'I announce the discovery before validating it to get ahead.', impact: { prestige: 3, wellbeing: -3, papers: 1 } },
+          { label: 'I request an external review before publishing anything.', impact: { prestige: 9, wellbeing: 1, discoveries: 1, papers: 1 } }
         ]
       },
       {
-        title: 'Critical thinking',
-        text: 'A viral result contradicts your research line. How do you react?',
+        order: 10,
+        title: 'The road to the Nobel',
+        text: 'The Nobel Committee is starting to cite your work. You are in the circle of the greats. This is the moment to leave your definitive mark on science.',
         options: [
-          { label: 'I review biases, methods and data before commenting.', impact: { prestige: 7, wellbeing: 1, papers: 1 } },
-          { label: 'I attack the study on social media without reading it.', impact: { prestige: -5, wellbeing: -1 } },
-          { label: 'I organise a debate with colleagues and students.', impact: { prestige: 6, wellbeing: 2 } }
+          { label: 'I publish the paper that changes everything and give global talks.', impact: { prestige: 15, papers: 2, discoveries: 1 } },
+          { label: 'I focus on mentoring the next generation of scientists.', impact: { wellbeing: 10, prestige: 8 } },
+          { label: 'I merge my research with life-saving applications.', impact: { prestige: 12, discoveries: 1, wellbeing: 5, papers: 1 } }
         ]
       }
     ]
@@ -401,16 +437,12 @@ export function createInitialState() {
 }
 
 export function buildQueue(questions, maxRounds) {
-  const fixed = questions.filter((q) => q.alwaysFirst);
-  const rest = shuffle(questions.filter((q) => !q.alwaysFirst));
+  // Sort by the numeric `order` property so the narrative arc is always preserved.
+  const sorted = [...questions].sort((a, b) => a.order - b.order);
+  const selected = sorted.slice(0, maxRounds);
   // Queue is consumed via .pop(), so items at the END are shown FIRST.
-  // Fixed questions go at the end so they appear first in the game.
-  // Clamp fixedToShow in case there are more fixed questions than total rounds,
-  // and use Math.max(0, ...) to prevent a negative slice when all rounds are
-  // consumed by fixed questions.
-  const fixedToShow = fixed.slice(0, maxRounds);
-  const selected = rest.slice(0, Math.max(0, maxRounds - fixedToShow.length));
-  return [...selected, ...fixedToShow];
+  // Reversing puts order-1 at the end so it is shown first in the game.
+  return [...selected].reverse();
 }
 
 export function checkAchievements(state) {
@@ -427,4 +459,20 @@ export function snapshotStats(state) {
     papers: state.papers,
     discoveries: state.discoveries
   };
+}
+
+/**
+ * Checks whether the game should end early after applying an impact.
+ * Burnout (wellbeing at or below BURNOUT_THRESHOLD) is checked first so that
+ * a harsh die roll can force an exit even on an option that doesn't voluntarily
+ * leave academia.
+ * @param {Object} state - Current player state (after impact was applied).
+ * @param {boolean} [optionExitsAcademia=false] - True when the chosen option
+ *   explicitly leaves academia (option.exitAcademia === true).
+ * @returns {'burnout'|'leftAcademia'|null}
+ */
+export function checkEarlyEnd(state, optionExitsAcademia = false) {
+  if (state.wellbeing <= BURNOUT_THRESHOLD) return 'burnout';
+  if (optionExitsAcademia) return 'leftAcademia';
+  return null;
 }

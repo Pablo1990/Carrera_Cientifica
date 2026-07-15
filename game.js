@@ -8,6 +8,7 @@ import {
   createInitialState,
   buildQueue,
   checkAchievements,
+  checkEarlyEnd,
   snapshotStats
 } from './src/game-logic.js';
 
@@ -79,6 +80,22 @@ function finishGame() {
   restartBtn.hidden = false;
 }
 
+function finishGameEarly(reason) {
+  const t = LANG[currentLang];
+  optionsEl.innerHTML = '';
+  if (reason === 'burnout') {
+    questionTitleEl.textContent = t.burnoutTitle;
+    questionEl.textContent = t.burnoutMsg;
+    resultEl.textContent = t.burnoutResult(state);
+  } else {
+    questionTitleEl.textContent = t.leftAcademiaTitle;
+    questionEl.textContent = t.leftAcademiaMsg;
+    resultEl.textContent = t.leftAcademiaResult(state);
+  }
+  startBtn.hidden = true;
+  restartBtn.hidden = false;
+}
+
 function renderQuestion() {
   if (state.rounds >= state.maxRounds || state.queue.length === 0) {
     finishGame();
@@ -102,6 +119,7 @@ function renderQuestion() {
       const roll = rollDie();
       const before = snapshotStats(state);
       applyImpact(state, option.impact, roll);
+      const earlyEnd = checkEarlyEnd(state, option.exitAcademia === true);
       const newAchievements = checkAchievements(state);
       newAchievements.forEach((id) => state.achievements.push(id));
       const t = LANG[currentLang];
@@ -116,6 +134,10 @@ function renderQuestion() {
       ].filter(Boolean).join('\n');
       renderStats();
       if (newAchievements.length > 0) renderAchievements();
+      if (earlyEnd) {
+        finishGameEarly(earlyEnd);
+        return;
+      }
       renderQuestion();
     });
     optionsEl.appendChild(button);
